@@ -11,7 +11,7 @@
 
 - **Instant profile scan** — top languages, repos, stars, activity
 - **Smart scoring algorithm** — categorizes repos as Products, Projects, or Experiments
-- **Deep AI analysis** — Google Gemini reviews each repo for showcase potential
+- **Deep AI analysis** — Groq (Llama 3.3 70B) reviews each repo for showcase potential
 - **Try-it-now buttons** — test with `torvalds`, `gaearon`, or any username
 - **Dark, minimal UI** — built with Tailwind CSS
 
@@ -26,7 +26,7 @@
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS v4 |
-| AI | Google Gemini API (free tier) |
+| AI | Groq (Llama 3.3 70B) API (free tier) |
 | Data | GitHub REST API |
 | Hosting | Vercel |
 
@@ -42,7 +42,7 @@ Create a `.env.local` file:
 
 ```env
 GITHUB_TOKEN=your_github_token
-GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
 ```
 
 Then start the dev server:

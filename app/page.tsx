@@ -89,14 +89,6 @@ interface GeminiAIResult {
   techStack: string[];
 }
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{ text: string }>;
-    };
-  }>;
-}
-
 interface GitHubErrorResponse {
   message?: string;
 }
@@ -223,10 +215,10 @@ function analyzeRepos(raw: GitHubRepo[]): AnalyzedRepo[] {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// GEMINI AI
+// GROQ AI (Llama 3.3 70B)
 // ═══════════════════════════════════════════════════════════════════
 
-async function analyzeRepoWithGemini(repo: GitHubRepo, readme: string, key: string): Promise<GeminiAIResult> {
+async function analyzeRepoWithAI(repo: GitHubRepo, readme: string, key: string): Promise<GeminiAIResult> {
   const prompt = `You are a senior software engineer reviewing a GitHub repository. Analyze and return ONLY valid JSON.
 
 Repository:
@@ -252,30 +244,33 @@ Return ONLY this JSON (no markdown):
   "techStack": ["<tech1>","<tech2>"]
 }`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
-      }),
-    }
-  );
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 1024,
+      response_format: { type: "json_object" },
+    }),
+  });
 
   if (!res.ok) {
     const err = (await res.json()) as { error?: { message?: string } };
-    throw new Error(err.error?.message ?? `Gemini error ${res.status}`);
+    throw new Error(err.error?.message ?? `Groq error ${res.status}`);
   }
 
-  const data = (await res.json()) as GeminiResponse;
-  const raw = data.candidates[0]?.content?.parts[0]?.text ?? "";
+  const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
+  const raw = data.choices[0]?.message?.content ?? "";
   const cleaned = raw.replace(/```json|```/g, "").trim();
   try {
     return JSON.parse(cleaned) as GeminiAIResult;
   } catch {
-    throw new Error("Gemini ne invalid JSON diya.");
+    throw new Error("AI returned invalid JSON.");
   }
 }
 
@@ -779,7 +774,7 @@ function AICard({ review, repo }: { review: AIRepoReview; repo: GitHubRepo }) {
 function AITab() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const [geminiKey, setGeminiKey] = useState<string>("");
+  const [groqKey, setGroqKey] = useState<string>("");
   const [showKey, setShowKey] = useState<boolean>(false);
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [reviews, setReviews] = useState<AIRepoReview[]>([]);
@@ -790,7 +785,7 @@ function AITab() {
 
   const handleSubmit = useCallback(async (username: string, token: string) => {
     if (!username.trim() && !token.trim()) { setError("Please enter a GitHub username or token!"); return; }
-    if (!geminiKey.trim()) { setError("Please enter your Gemini API key!"); return; }
+    if (!groqKey.trim()) { setError("Please enter your Groq API key!"); return; }
     abortRef.current = false;
     setLoading(true); setError(""); setReviews([]); setRepos([]);
     try {
@@ -812,7 +807,7 @@ function AITab() {
         setReviews((prev) => prev.map((rv) => rv.repoId === repo.id ? { ...rv, status: "analyzing" } : rv));
         try {
           const readme = await fetchReadme(repo, token.trim());
-          const result = await analyzeRepoWithGemini(repo, readme, geminiKey.trim());
+          const result = await analyzeRepoWithAI(repo, readme, groqKey.trim());
           setReviews((prev) => prev.map((rv) => rv.repoId === repo.id ? {
             ...rv, status: "done", category: result.category, aiScore: result.aiScore,
             summary: result.summary, strengths: result.strengths, improvements: result.improvements,
@@ -833,7 +828,7 @@ function AITab() {
     } finally {
       setLoading(false);
     }
-  }, [geminiKey]);
+  }, [groqKey]);
 
   useEffect(() => {
     if (reviews.length > 0) setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -856,13 +851,13 @@ function AITab() {
     return r.category === aiFilter;
   });
 
-  const geminiField = (
+  const groqField = (
     <div className="flex flex-col gap-2">
       <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.15em] font-mono">
-        Gemini API Key <span className="text-zinc-800 normal-case font-normal tracking-normal">(aistudio.google.com — free)</span>
+        Groq API Key <span className="text-zinc-800 normal-case font-normal tracking-normal">(console.groq.com/keys — free)</span>
       </label>
       <div className="flex gap-2">
-        <input type={showKey ? "text" : "password"} value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)}
+        <input type={showKey ? "text" : "password"} value={groqKey} onChange={(e) => setGroqKey(e.target.value)}
           placeholder="AIzaSy..." autoComplete="off" spellCheck={false}
           className="flex-1 min-w-0 bg-[#0a0d14] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-zinc-700 ring-1 ring-white/[0.08] focus:ring-blue-400/40 outline-none transition-shadow" />
         <button type="button" onClick={() => setShowKey((s) => !s)}
@@ -879,7 +874,7 @@ function AITab() {
       <div className="rounded-2xl bg-blue-500/[0.05] ring-1 ring-blue-500/15 p-4 sm:p-5 flex gap-4 items-start">
         <span className="text-2xl flex-shrink-0">🤖</span>
         <div>
-          <p className="font-bold text-sm text-blue-300 mb-1">Deep AI Analysis — Gemini 1.5 Flash (Free)</p>
+          <p className="font-bold text-sm text-blue-300 mb-1">Deep AI Analysis — Llama 3.3 70B via Groq (Free & Fast)</p>
           <p className="text-xs text-zinc-500 leading-relaxed">
             Har repo ka README padhega + honest AI review dega. Free tier mein <strong className="text-zinc-400">15 req/min</strong> limit hai — 4 second gap rakha hai automatically.
           </p>
@@ -889,7 +884,7 @@ function AITab() {
       <div className="max-w-xl mx-auto">
         <CredForm onSubmit={handleSubmit} loading={loading} error={error}
           label="🤖  Start Deep AI Analysis" accentClass="bg-gradient-to-r from-blue-500 to-blue-400"
-          extra={geminiField} />
+          extra={groqField} />
       </div>
 
       {/* Progress */}
@@ -955,7 +950,7 @@ function AITab() {
       {reviews.length === 0 && !loading && (
         <div className="flex flex-col items-center py-20 text-zinc-700 gap-4">
           <span className="text-5xl">🤖</span>
-          <p className="text-sm font-mono text-center max-w-xs">Enter your GitHub token + Gemini API key to start deep AI analysis.</p>
+          <p className="text-sm font-mono text-center max-w-xs">Enter your GitHub token + Groq API key to start deep AI analysis.</p>
         </div>
       )}
     </div>
@@ -1024,7 +1019,7 @@ export default function DevScanPage() {
               <span className="hidden sm:inline">Deep AI Analyze</span>
               <span className="sm:hidden">Deep AI</span>
               <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${tab === "ai" ? "bg-blue-400/15 text-blue-400" : "bg-white/[0.04] text-zinc-600"}`}>
-                Gemini
+                Groq
               </span>
             </button>
           </div>
