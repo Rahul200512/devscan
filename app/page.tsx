@@ -1038,12 +1038,7 @@ export default function DevScanPage() {
         </div>
 
         <footer className="mt-8 py-6 border-t border-white/[0.04] text-center text-zinc-500 text-sm">
-          Built by{" "}
-          <a href="https://github.com/Rahul200512" target="_blank" rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 transition-colors">
-            Rahul
-          </a>
-          {" · "}
+          Built by Rahul ·{" "}
           <a href="https://www.linkedin.com/in/rahul-reddy-avula-37572b328/" target="_blank" rel="noopener noreferrer"
             className="text-blue-400 hover:text-blue-300 transition-colors">
             LinkedIn
