@@ -33,7 +33,7 @@
 ## Run Locally
 
 ```bash
-git clone https://github.com/Rahul200512/devscan.git
+git clone <repo-url>
 cd devscan
 npm install
 ```
@@ -62,4 +62,4 @@ Open [http://localhost:3000](http://localhost:3000) and start scanning.
 
 ## Author
 
-Built by **Rahul** · [GitHub](https://github.com/Rahul200512)
+Built by **Rahul**

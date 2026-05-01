@@ -362,7 +362,7 @@ function CredForm({ onSubmit, loading, error, label, accentClass, extra }: CredF
           className="w-full bg-[#0a0d14] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-zinc-700 ring-1 ring-white/[0.08] focus:ring-blue-400/40 outline-none transition-shadow" />
         <div className="flex gap-2 flex-wrap items-center mt-1 text-xs">
           <span className="text-zinc-600">Try:</span>
-          {["torvalds", "gaearon", "Rahul200512"].map((name) => (
+          {["torvalds", "gaearon", "shadcn"].map((name) => (
             <button key={name} type="button" onClick={() => setU(name)}
               className="px-3 py-1 rounded-full bg-zinc-800 hover:bg-blue-500/20 border border-zinc-700 hover:border-blue-500 text-zinc-400 hover:text-blue-300 transition-all">
               {name}
