@@ -123,15 +123,36 @@ function buildHeaders(token: string): Record<string, string> {
   return headers;
 }
 
+// Returns the authenticated user's login if the token is valid, else "".
+async function fetchTokenOwner(token: string): Promise<string> {
+  if (!token) return "";
+  try {
+    const res = await fetch("https://api.github.com/user", { headers: buildHeaders(token) });
+    if (!res.ok) return "";
+    const data = (await res.json()) as { login?: string };
+    return data.login ?? "";
+  } catch {
+    return "";
+  }
+}
+
 async function fetchAllRepos(username: string, token: string): Promise<GitHubRepo[]> {
   const cleanToken = token.trim();
   const cleanUser = username.trim();
   if (!cleanUser) throw new Error("Please enter a GitHub username.");
   const headers = buildHeaders(cleanToken);
+
+  // If the token belongs to the entered username, use /user/repos so private repos are included.
+  // Otherwise use the public endpoint so we never silently return the token-owner's repos.
+  const tokenOwner = cleanToken ? await fetchTokenOwner(cleanToken) : "";
+  const isSelf = tokenOwner.toLowerCase() === cleanUser.toLowerCase() && tokenOwner !== "";
+
   const all: GitHubRepo[] = [];
   let page = 1;
   while (true) {
-    const url = `https://api.github.com/users/${cleanUser}/repos?per_page=100&page=${page}&type=all&sort=updated`;
+    const url = isSelf
+      ? `https://api.github.com/user/repos?per_page=100&page=${page}&affiliation=owner&visibility=all&sort=updated`
+      : `https://api.github.com/users/${cleanUser}/repos?per_page=100&page=${page}&type=all&sort=updated`;
     const res = await fetch(url, { headers });
     if (!res.ok) throw await parseGitHubError(res);
     const batch = (await res.json()) as GitHubRepo[];
@@ -372,7 +393,7 @@ function CredForm({ onSubmit, loading, error, label, accentClass, extra }: CredF
       </div>
       <div className="flex flex-col gap-2">
         <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.15em] font-mono">
-          GitHub Token <span className="ml-1 text-[9px] font-bold text-amber-300 bg-amber-400/10 ring-1 ring-amber-400/30 rounded px-1.5 py-0.5 align-middle">OPTIONAL</span> <span className="text-zinc-400 normal-case font-normal tracking-normal">— raises rate limit 60 → 5,000/hr</span>
+          GitHub Token <span className="ml-1 text-[9px] font-bold text-amber-300 bg-amber-400/10 ring-1 ring-amber-400/30 rounded px-1.5 py-0.5 align-middle">OPTIONAL</span> <span className="text-zinc-400 normal-case font-normal tracking-normal">— higher rate limit + see your own private repos</span>
         </label>
         <div className="flex gap-2">
           <input type={showT ? "text" : "password"} value={t} onChange={(e) => setT(e.target.value)}
