@@ -126,13 +126,12 @@ function buildHeaders(token: string): Record<string, string> {
 async function fetchAllRepos(username: string, token: string): Promise<GitHubRepo[]> {
   const cleanToken = token.trim();
   const cleanUser = username.trim();
+  if (!cleanUser) throw new Error("Please enter a GitHub username.");
   const headers = buildHeaders(cleanToken);
   const all: GitHubRepo[] = [];
   let page = 1;
   while (true) {
-    const url = cleanToken
-      ? `https://api.github.com/user/repos?per_page=100&page=${page}&type=all&sort=updated`
-      : `https://api.github.com/users/${cleanUser}/repos?per_page=100&page=${page}&type=all&sort=updated`;
+    const url = `https://api.github.com/users/${cleanUser}/repos?per_page=100&page=${page}&type=all&sort=updated`;
     const res = await fetch(url, { headers });
     if (!res.ok) throw await parseGitHubError(res);
     const batch = (await res.json()) as GitHubRepo[];
@@ -147,8 +146,9 @@ async function fetchAllRepos(username: string, token: string): Promise<GitHubRep
 async function fetchUser(username: string, token: string): Promise<GitHubUser> {
   const cleanToken = token.trim();
   const cleanUser = username.trim();
+  if (!cleanUser) throw new Error("Please enter a GitHub username.");
   const headers = buildHeaders(cleanToken);
-  const url = cleanToken ? "https://api.github.com/user" : `https://api.github.com/users/${cleanUser}`;
+  const url = `https://api.github.com/users/${cleanUser}`;
   const res = await fetch(url, { headers });
   if (!res.ok) throw await parseGitHubError(res);
   return res.json() as Promise<GitHubUser>;
@@ -365,7 +365,7 @@ function CredForm({ onSubmit, loading, error, label, accentClass, extra }: CredF
       </div>
       <div className="flex flex-col gap-2">
         <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.15em] font-mono">
-          GitHub Token <span className="text-zinc-800 normal-case font-normal tracking-normal">(optional, for private repos)</span>
+          GitHub Token <span className="ml-1 text-[9px] font-bold text-amber-300 bg-amber-400/10 ring-1 ring-amber-400/30 rounded px-1.5 py-0.5 align-middle">OPTIONAL</span> <span className="text-zinc-400 normal-case font-normal tracking-normal">— raises rate limit 60 → 5,000/hr</span>
         </label>
         <div className="flex gap-2">
           <input type={showT ? "text" : "password"} value={t} onChange={(e) => setT(e.target.value)}
@@ -486,7 +486,7 @@ function NormalTab() {
   const ref = useRef<HTMLDivElement>(null);
 
   const handleSubmit = useCallback(async (username: string, token: string) => {
-    if (!username.trim() && !token.trim()) { setError("Please enter a username or token!"); return; }
+    if (!username.trim()) { setError("Please enter a GitHub username!"); return; }
     setLoading(true); setError(""); setRepos([]); setUser(null);
     try {
       const u = await fetchUser(username.trim(), token.trim());
@@ -593,7 +593,7 @@ function NormalTab() {
           {/* Top 3 */}
           {repos.length >= 3 && (
             <div className="rounded-2xl bg-gradient-to-br from-blue-400/[0.04] to-blue-400/[0.04] ring-1 ring-blue-400/15 p-5">
-              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em] font-mono mb-4">🏆 Sabse Damdaar Projects</p>
+              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em] font-mono mb-4">🏆 Top Projects</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {repos.slice(0, 3).map((r, i) => (
                   <a key={r.id} href={r.html_url} target="_blank" rel="noreferrer"
@@ -668,7 +668,7 @@ function AICard({ review, repo }: { review: AIRepoReview; repo: GitHubRepo }) {
     return (
       <div className="rounded-2xl bg-white/[0.01] ring-1 ring-white/[0.04] p-4 opacity-40">
         <p className="text-sm text-zinc-500 font-mono">{repo.name}</p>
-        <p className="text-xs text-zinc-700 font-mono mt-1">Queue mein hai...</p>
+        <p className="text-xs text-zinc-700 font-mono mt-1">Waiting in queue...</p>
       </div>
     );
   }
@@ -784,7 +784,7 @@ function AITab() {
   const abortRef = useRef<boolean>(false);
 
   const handleSubmit = useCallback(async (username: string, token: string) => {
-    if (!username.trim() && !token.trim()) { setError("Please enter a GitHub username or token!"); return; }
+    if (!username.trim()) { setError("Please enter a GitHub username!"); return; }
     if (!groqKey.trim()) { setError("Please enter your Groq API key!"); return; }
     abortRef.current = false;
     setLoading(true); setError(""); setReviews([]); setRepos([]);
@@ -824,7 +824,7 @@ function AITab() {
         }
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Repos fetch karne mein error.");
+      setError(e instanceof Error ? e.message : "Failed to fetch repos.");
     } finally {
       setLoading(false);
     }
@@ -854,11 +854,11 @@ function AITab() {
   const groqField = (
     <div className="flex flex-col gap-2">
       <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.15em] font-mono">
-        Groq API Key <span className="text-zinc-800 normal-case font-normal tracking-normal">(console.groq.com/keys — free)</span>
+        Groq API Key <span className="ml-1 text-[9px] font-bold text-red-300 bg-red-400/10 ring-1 ring-red-400/30 rounded px-1.5 py-0.5 align-middle">REQUIRED</span> <span className="text-zinc-400 normal-case font-normal tracking-normal">— get a free key at console.groq.com/keys</span>
       </label>
       <div className="flex gap-2">
         <input type={showKey ? "text" : "password"} value={groqKey} onChange={(e) => setGroqKey(e.target.value)}
-          placeholder="AIzaSy..." autoComplete="off" spellCheck={false}
+          placeholder="gsk_..." autoComplete="off" spellCheck={false}
           className="flex-1 min-w-0 bg-[#0a0d14] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-zinc-700 ring-1 ring-white/[0.08] focus:ring-blue-400/40 outline-none transition-shadow" />
         <button type="button" onClick={() => setShowKey((s) => !s)}
           className="flex-shrink-0 bg-white/[0.04] ring-1 ring-white/[0.08] rounded-xl px-3.5 text-zinc-500 hover:text-zinc-300 text-lg transition-colors">
@@ -876,7 +876,7 @@ function AITab() {
         <div>
           <p className="font-bold text-sm text-blue-300 mb-1">Deep AI Analysis — Llama 3.3 70B via Groq (Free & Fast)</p>
           <p className="text-xs text-zinc-500 leading-relaxed">
-            Har repo ka README padhega + honest AI review dega. Free tier mein <strong className="text-zinc-400">15 req/min</strong> limit hai — 4 second gap rakha hai automatically.
+            Reads each repo&apos;s README and generates an honest AI review. Free tier limit is <strong className="text-zinc-400">15 req/min</strong> — a 4-second delay is added between calls automatically.
           </p>
         </div>
       </div>
@@ -1037,7 +1037,7 @@ export default function DevScanPage() {
             Rahul
           </a>
           {" · "}
-          <a href="https://www.linkedin.com/in/YOUR_LINKEDIN_HANDLE" target="_blank" rel="noopener noreferrer"
+          <a href="https://www.linkedin.com/in/rahul-reddy-avula-37572b328/" target="_blank" rel="noopener noreferrer"
             className="text-blue-400 hover:text-blue-300 transition-colors">
             LinkedIn
           </a>

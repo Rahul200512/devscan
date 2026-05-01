@@ -58,7 +58,7 @@ Open [http://localhost:3000](http://localhost:3000) and start scanning.
 1. Enter a GitHub username
 2. DevScan fetches all public repos via the GitHub REST API
 3. Each repo is scored on stars, activity, completeness, and community
-4. Optional: send the repo to Gemini for an AI review with strengths, improvements, and showcase potential
+4. Optional: send the repo to Groq (Llama 3.3 70B) for an AI review with strengths, improvements, and showcase potential
 
 ## Author
 
