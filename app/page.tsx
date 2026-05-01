@@ -321,10 +321,17 @@ function ScoreRing({ score, size = 52 }: { score: number; size?: number }) {
   );
 }
 
+function formatNum(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "") + "M";
+  if (n >= 10_000) return (n / 1_000).toFixed(n >= 100_000 ? 0 : 1).replace(/\.0$/, "") + "k";
+  return n.toLocaleString("en-US");
+}
+
 function StatTile({ value, label, accent }: { value: number | string; label: string; accent: string }) {
+  const display = typeof value === "number" ? formatNum(value) : value;
   return (
     <div className="flex flex-col items-center justify-center gap-1 py-4 px-2 rounded-2xl bg-white/[0.025] ring-1 ring-white/[0.06]">
-      <span className="text-xl sm:text-2xl font-black font-mono leading-none" style={{ color: accent }}>{value}</span>
+      <span className="text-xl sm:text-2xl font-black font-mono leading-none" style={{ color: accent }}>{display}</span>
       <span className="text-[9px] sm:text-[10px] text-zinc-600 uppercase tracking-widest text-center leading-tight">{label}</span>
     </div>
   );
@@ -449,8 +456,8 @@ function NormalCard({ repo, rank }: { repo: AnalyzedRepo; rank: number }) {
       </div>
 
       <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5 text-[12px] text-zinc-500">
-        <span className="font-mono">⭐ {repo.stargazers_count}</span>
-        <span className="font-mono">🍴 {repo.forks_count}</span>
+        <span className="font-mono">⭐ {formatNum(repo.stargazers_count)}</span>
+        <span className="font-mono">🍴 {formatNum(repo.forks_count)}</span>
         {repo.language && <span className="text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-lg font-mono text-[11px]">{repo.language}</span>}
         {repo.homepage && <a href={repo.homepage} target="_blank" rel="noreferrer" className="text-blue-400 font-mono text-[11px]">🌐 Live</a>}
         <span className="ml-auto text-zinc-700 font-mono text-[11px]">{formatAge(repo.daysSincePush)}</span>
@@ -566,7 +573,7 @@ function NormalTab() {
               className="w-12 h-12 rounded-full ring-2 ring-blue-400/30 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="font-bold text-base text-white">{user.name ?? user.login}</p>
-              <p className="text-xs text-zinc-500 font-mono">@{user.login}{user.followers > 0 && ` · ${user.followers} followers`}{user.location && ` · ${user.location}`}</p>
+              <p className="text-xs text-zinc-500 font-mono">@{user.login}{user.followers > 0 && ` · ${formatNum(user.followers)} followers`}{user.location && ` · ${user.location}`}</p>
               {user.bio && <p className="text-xs text-zinc-600 mt-0.5 line-clamp-1">{user.bio}</p>}
             </div>
             <button type="button" onClick={() => { setUser(null); setRepos([]); setFilter("all"); setSearch(""); }}
